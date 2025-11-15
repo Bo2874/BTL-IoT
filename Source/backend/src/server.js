@@ -1,8 +1,10 @@
 import express from "express";
+import { createServer } from "http";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import sensorRoutes from "./routes/sensorRoutes.js";
+import { initSocket } from "./realtime/socket.js";
 import "./mqtt/mqttClient.js"; // Tự động khởi động kết nối MQTT
 
 dotenv.config();
@@ -14,6 +16,7 @@ if (!process.env.MONGO_URI) {
 }
 
 const app = express();
+const server = createServer(app);
 
 app.use(cors());
 app.use(express.json());
@@ -43,6 +46,9 @@ mongoose.connection.on("error", (err) => {
 
 app.use("/api/sensors", sensorRoutes);
 
+// Initialize Socket.IO
+initSocket(server);
+
 // Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Unhandled error:", err);
@@ -53,4 +59,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
