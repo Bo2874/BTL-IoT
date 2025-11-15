@@ -1,6 +1,7 @@
 import mqtt from "mqtt";
 import mqttConfig from "../config/mqttConfig.js";
 import SensorData from "../models/sensorData.js";
+import { emitSensorUpdate } from "../realtime/socket.js";
 
 const options = {
   clientId: mqttConfig.clientId,
@@ -87,6 +88,22 @@ client.on("message", async (topic, message) => {
 
     await newData.save();
     console.log("💾 Saved to MongoDB");
+
+    // Emit realtime update via Socket.IO
+    const payload = {
+      aqi: newData.AQI,
+      temperature: newData.temperature,
+      humidity: newData.humidity,
+      pm25: newData.dust,
+      time: newData.datetime,
+      createdAt: newData.createdAt
+    };
+    try {
+      emitSensorUpdate(payload);
+    } catch (e) {
+      // Socket not initialized yet or error; log and continue
+      console.warn("⚠️ Socket emit skipped:", e.message);
+    }
 
   } catch (err) {
     console.error("⚠️ Error processing MQTT message:", err.message);
