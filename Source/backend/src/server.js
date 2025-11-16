@@ -4,7 +4,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import sensorRoutes from "./routes/sensorRoutes.js";
+import summaryRoutes from "./routes/summaryRoutes.js";
 import { initSocket } from "./realtime/socket.js";
+import { initScheduledJobs } from "./jobs/scheduledJobs.js";
 import "./mqtt/mqttClient.js"; // Tự động khởi động kết nối MQTT
 
 dotenv.config();
@@ -45,9 +47,13 @@ mongoose.connection.on("error", (err) => {
 });
 
 app.use("/api/sensors", sensorRoutes);
+app.use("/api/summaries", summaryRoutes);
 
 // Initialize Socket.IO
 initSocket(server);
+
+// Initialize scheduled jobs (chạy mỗi giờ để tạo AI summary)
+initScheduledJobs();
 
 // Global error handler
 app.use((err, req, res, next) => {
