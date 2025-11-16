@@ -1,2 +1,18 @@
 Source/backend/node_modules/
 Source/frontend/node_modules/
+
+# Environment variables (chứa API keys và secrets)
+.env
+Source/backend/.env
+Source/frontend/.env
+*.env
+
+# Log files
+*.log
+npm-debug.log*
+
+# Build outputs
+dist/
+build/
+Source/backend/dist/
+Source/frontend/dist/
