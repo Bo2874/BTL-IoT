@@ -4,12 +4,14 @@ import { API_URL } from '../config';
 import { io } from 'socket.io-client';
 import SensorChart from '../components/SensorChart';
 import Loader from '../components/Loader';
+import AISummaryModal from '../components/AISummaryModal';
 import { Bar, Doughnut } from 'react-chartjs-2';
 
 export default function Dashboard() {
   const [realtime, setRealtime] = useState(null);
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAISummary, setShowAISummary] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -156,8 +158,17 @@ export default function Dashboard() {
             <p className='text-xs opacity-90'>Real-time Environmental Monitoring</p>
           </div>
         </div>
-        <div className='text-right text-xs'>
-          <p>{new Date().toLocaleString('vi-VN')}</p>
+        <div className='flex items-center gap-3'>
+          <button 
+            onClick={() => setShowAISummary(true)}
+            className='ai-summary-btn'
+            title='Xem tóm tắt AI theo giờ'
+          >
+            🤖 AI Summary
+          </button>
+          <div className='text-right text-xs'>
+            <p>{new Date().toLocaleString('vi-VN')}</p>
+          </div>
         </div>
       </div>
 
@@ -366,6 +377,12 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* AI Summary Modal */}
+      <AISummaryModal 
+        isOpen={showAISummary} 
+        onClose={() => setShowAISummary(false)} 
+      />
     </div>
   );
 }
