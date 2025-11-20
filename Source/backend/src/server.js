@@ -5,6 +5,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import sensorRoutes from "./routes/sensorRoutes.js";
 import summaryRoutes from "./routes/summaryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import deviceRoutes from "./routes/deviceRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import firmwareRoutes from "./routes/firmwareRoutes.js";
 import { initSocket } from "./realtime/socket.js";
 import { initScheduledJobs } from "./jobs/scheduledJobs.js";
 import "./mqtt/mqttClient.js"; // Tự động khởi động kết nối MQTT
@@ -48,6 +52,10 @@ mongoose.connection.on("error", (err) => {
 
 app.use("/api/sensors", sensorRoutes);
 app.use("/api/summaries", summaryRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/devices", deviceRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/firmware", firmwareRoutes);
 
 // Initialize Socket.IO
 initSocket(server);
