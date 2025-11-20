@@ -2,14 +2,16 @@
 
 ## 📋 Mô Tả Tổng Quan
 
-Hệ thống giám sát chất lượng không khí thời gian thực sử dụng:
+Hệ thống giám sát chất lượng không khí thời gian thực với đầy đủ tính năng quản lý:
 - **Thiết bị IoT**: ESP32 + cảm biến (DHT11, MQ135, GP2Y1010AU0F)
 - **Truyền dữ liệu**: MQTT (HiveMQ Cloud)
 - **Backend**: Node.js/Express + MongoDB
 - **Frontend**: React/Vite với biểu đồ realtime
 - **Cập nhật realtime**: Socket.IO
+- **AI Analysis**: OpenAI GPT-4o-mini
+- **OTA Update**: Remote firmware update
 
-📅 **Ngày cập nhật**: 16/11/2025
+📅 **Ngày cập nhật**: 20/11/2025
 
 ---
 
@@ -21,20 +23,23 @@ Hệ thống giám sát chất lượng không khí thời gian thực sử dụ
 │  - Đọc nhiệt độ, độ ẩm                                      │
 │  - Đọc AQI (MQ135)                                          │
 │  - Đọc nồng độ bụi PM2.5 (GP2Y1010)                        │
+│  - OTA firmware update support                              │
 └───────────────┬─────────────────────────────────────────────┘
                 │ MQTT Publish (JSON)
                 ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  MQTT Broker (HiveMQ Cloud)                                 │
-│  Topic: home/room1/sensors                                  │
+│  Topic: home/room1/sensors, iot/devices/{id}/ota           │
 └───────────────┬─────────────────────────────────────────────┘
                 │ Subscribe
                 ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Backend (Node.js + Express)                                │
 │  ├─ MQTT Client: nhận & validate dữ liệu                    │
-│  ├─ MongoDB: lưu trữ lịch sử                                │
-│  ├─ REST API: /api/sensors/*                                │
+│  ├─ MongoDB: lưu trữ lịch sử, users, devices, firmware      │
+│  ├─ REST API: /api/sensors/*, /api/devices/*, /api/users/* │
+│  ├─ OpenAI API: AI hourly summary                           │
+│  ├─ OTA API: firmware upload/download/trigger               │
 │  └─ Socket.IO: phát realtime event                          │
 └───────────────┬─────────────────────────────────────────────┘
                 │ HTTP + WebSocket
@@ -42,8 +47,11 @@ Hệ thống giám sát chất lượng không khí thời gian thực sử dụ
 ┌─────────────────────────────────────────────────────────────┐
 │  Frontend (React + Vite)                                    │
 │  - Dashboard với biểu đồ realtime                           │
-│  - Lịch sử dữ liệu                                          │
-│  - Chart.js: Line, Bar, Doughnut                            │
+│  - AI Summary modal                                          │
+│  - Device Management (Admin)                                 │
+│  - User Management (Admin)                                   │
+│  - OTA Firmware Update (Admin)                               │
+│  - Role-based access control (Admin/Worker)                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,16 +67,44 @@ Hệ thống giám sát chất lượng không khí thời gian thực sử dụ
 - Biểu đồ tròn (Doughnut): Phân bố chất lượng không khí
 - Gauge: Giá trị trung bình 50 mẫu
 
-### 🤖 AI Summary (NEW!)
-- **Tóm tắt thông minh theo giờ**: Hệ thống tự động tạo bản tóm tắt bằng AI (OpenAI GPT) mỗi giờ
+### 🤖 AI Summary
+- **Tóm tắt thông minh theo giờ**: Hệ thống tự động tạo bản tóm tắt bằng AI (OpenAI GPT-4o-mini) mỗi giờ
 - **Phân tích xu hướng**: Đánh giá tình trạng không khí, xu hướng biến đổi
-- **Lời khuyên thực tế**: AI đưa ra khuyến nghị dựa trên dữ liệu
+- **So sánh tiêu chuẩn**: So với tiêu chuẩn WHO, EPA
+- **Lời khuyên thực tế**: AI đưa ra khuyến nghị cho ban quản lý và công nhân
 - **Giao diện thân thiện**: Nút "🤖 AI Summary" ở góc trên phải Dashboard
 - **Xem lịch sử**: Modal hiển thị tóm tắt 24 giờ gần nhất với thống kê chi tiết
+
+### 🛠️ Device Management (Admin Only)
+- **CRUD Devices**: Thêm, sửa, xóa thiết bị ESP32
+- **Device Info**: deviceId, name, location, firmware version, MAC, IP
+- **Worker Assignment**: Phân quyền devices cho Workers
+- **Worker View**: Workers chỉ thấy devices được assign
+
+### 👥 User Management (Admin Only)
+- **CRUD Users**: Quản lý tài khoản người dùng
+- **Role Management**: Admin/Worker role assignment
+- **Search & Filter**: Tìm kiếm và lọc users
+- **Device Count**: Hiển thị số devices của mỗi user
+
+### 🔄 OTA Firmware Update (Admin Only)
+- **Upload Firmware**: Upload file .bin lên server
+- **Version Control**: Quản lý phiên bản firmware
+- **MD5 Verification**: Đảm bảo tính toàn vẹn file
+- **Remote Trigger**: Trigger OTA update qua MQTT
+- **Auto Download**: ESP32 tự động download và flash firmware
+- **Rollback Support**: ESP32 tự động rollback nếu update fail
+
+### 🔐 Authentication & Authorization
+- **JWT-based Auth**: Secure token-based authentication
+- **Role-based Access**: Admin/Worker permissions
+- **Protected Routes**: Frontend route protection
+- **API Middleware**: Backend auth middleware
 
 ### 📈 Lịch Sử
 - Xem lại dữ liệu đã lưu
 - API hỗ trợ query với limit tùy chỉnh
+- Chart hiển thị dữ liệu historical
 
 ### 🔄 Realtime Updates
 - Socket.IO với event `sensor:update`
@@ -87,24 +123,38 @@ Hệ thống giám sát chất lượng không khí thời gian thực sử dụ
 ```
 BTL-IoT/
 ├── README.md                           # Tài liệu này
-├── Documents/                          # Tài liệu dự án
+├── Documents/
+│   ├── FULL_DEMO_GUIDE.md              # Hướng dẫn demo toàn hệ thống
+│   └── OTA_DEMO_GUIDE.md               # Hướng dẫn demo OTA firmware
 ├── Arduino/
 │   ├── BTL_IoT.ino                     # Code ESP32 (phiên bản cơ bản)
+│   ├── OTA_Integration.ino             # Code ESP32 OTA support
 │   └── BTL_IoT/
 │       └── BTL_IoT.ino                 # Code ESP32 (có trung bình MQ135)
 └── Source/
     ├── backend/
     │   ├── package.json
+    │   ├── uploads/
+    │   │   └── firmware/                # Thư mục lưu firmware files
     │   └── src/
     │       ├── server.js               # Khởi tạo Express, MongoDB, Socket.IO, Scheduled Jobs
     │       ├── config/
     │       │   └── mqttConfig.js       # Cấu hình MQTT broker
     │       ├── controllers/
     │       │   ├── sensorController.js # Logic xử lý API sensors
-    │       │   └── summaryController.js # Logic xử lý AI summaries
+    │       │   ├── summaryController.js # Logic xử lý AI summaries
+    │       │   ├── authController.js   # Authentication (login, register)
+    │       │   ├── userController.js   # User management
+    │       │   ├── deviceController.js # Device management
+    │       │   └── firmwareController.js # OTA firmware management
     │       ├── models/
     │       │   ├── sensorData.js       # Schema MongoDB cho sensor data
-    │       │   └── hourlySummary.js    # Schema MongoDB cho AI summaries
+    │       │   ├── hourlySummary.js    # Schema MongoDB cho AI summaries
+    │       │   ├── user.js             # Schema User (username, password, role)
+    │       │   ├── device.js           # Schema Device (deviceId, location, firmware)
+    │       │   └── firmware.js         # Schema Firmware (version, file, MD5)
+    │       ├── middleware/
+    │       │   └── authMiddleware.js   # JWT auth & role-based access
     │       ├── services/
     │       │   └── openaiService.js    # Tích hợp OpenAI API
     │       ├── jobs/
@@ -115,7 +165,11 @@ BTL-IoT/
     │       │   └── socket.js           # Socket.IO setup
     │       └── routes/
     │           ├── sensorRoutes.js     # Định nghĩa API routes sensors
-    │           └── summaryRoutes.js    # Định nghĩa API routes summaries
+    │           ├── summaryRoutes.js    # Định nghĩa API routes summaries
+    │           ├── authRoutes.js       # Authentication routes
+    │           ├── userRoutes.js       # User management routes
+    │           ├── deviceRoutes.js     # Device management routes
+    │           └── firmwareRoutes.js   # OTA firmware routes
     └── frontend/
         ├── index.html
         ├── package.json
@@ -126,20 +180,35 @@ BTL-IoT/
             ├── config.js               # API_URL
             ├── api/
             │   ├── sensors.js          # API calls sensors
-            │   └── summaries.js        # API calls summaries
+            │   ├── summaries.js        # API calls summaries
+            │   ├── auth.js             # API calls authentication
+            │   ├── users.js            # API calls user management
+            │   ├── devices.js          # API calls device management
+            │   └── firmware.js         # API calls OTA firmware
             ├── components/
             │   ├── AQIBadge.jsx
             │   ├── AISummaryModal.jsx  # Modal hiển thị AI summaries
             │   ├── Loader.jsx
             │   ├── RealtimeCard.jsx
-            │   └── SensorChart.jsx     # Biểu đồ Line Chart
+            │   ├── SensorChart.jsx     # Biểu đồ Line Chart
+            │   └── ProtectedRoute.jsx  # Route protection HOC
+            ├── contexts/
+            │   └── AuthContext.jsx     # Authentication context
             ├── hooks/
             │   └── useFetch.js
             ├── pages/
+            │   ├── Login.jsx           # Trang đăng nhập
+            │   ├── Register.jsx        # Trang đăng ký
             │   ├── Dashboard.jsx       # Trang chính (có nút AI Summary)
-            │   └── History.jsx         # Trang lịch sử
+            │   ├── History.jsx         # Trang lịch sử
+            │   ├── AdminPanel.jsx      # Trang quản lý devices (Admin)
+            │   ├── UserManagement.jsx  # Trang quản lý users (Admin)
+            │   └── OTAManagement.jsx   # Trang OTA firmware (Admin)
             ├── styles/
-            │   └── global.css          # CSS tùy chỉnh
+            │   ├── global.css          # CSS tùy chỉnh
+            │   ├── admin.css           # CSS Admin Panel
+            │   ├── user.css            # CSS User Management
+            │   └── ota.css             # CSS OTA Management
             └── utils/
                 ├── aqiColor.js
                 └── formatDate.js
@@ -217,6 +286,10 @@ BACKEND_URL=http://localhost:5000
 # CORS
 FRONTEND_ORIGIN=http://localhost:5173
 
+# JWT Secret (cho authentication)
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_EXPIRE=7d
+
 # OpenAI API (cho AI Summary)
 OPENAI_API_KEY=sk-your-openai-api-key-here
 
@@ -237,6 +310,8 @@ MQTT_TOPIC=home/room1/sensors
 | `NODE_ENV` | Môi trường (development/production) | `development` |
 | `BACKEND_URL` | URL backend (cho scheduled jobs) | `http://localhost:5000` |
 | `FRONTEND_ORIGIN` | URL frontend cho CORS | `*` |
+| `JWT_SECRET` | Secret key cho JWT token | **Bắt buộc** |
+| `JWT_EXPIRE` | Thời gian hết hạn token | `7d` |
 | `OPENAI_API_KEY` | API key của OpenAI (cho AI Summary) | **Bắt buộc cho AI** |
 | `MQTT_BROKER_URL` | URL MQTT broker | Xem config |
 | `MQTT_PORT` | Port MQTT (TLS: 8883) | `8883` |
@@ -390,6 +465,356 @@ GET /api/summaries/2025-11-16T05:00:00.000Z
 
 ---
 
+## 🔐 Authentication API Endpoints
+
+#### 1. Đăng ký User mới
+```http
+POST /api/auth/register
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "worker1",
+  "email": "worker1@iot.com",
+  "password": "worker123",
+  "role": "Worker"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Đăng ký thành công",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "_id": "...",
+    "username": "worker1",
+    "email": "worker1@iot.com",
+    "role": "Worker",
+    "deviceCount": 0
+  }
+}
+```
+
+#### 2. Đăng nhập
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Đăng nhập thành công",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "_id": "...",
+    "username": "admin",
+    "email": "admin@iot.com",
+    "role": "Admin",
+    "deviceCount": 5
+  }
+}
+```
+
+#### 3. Lấy thông tin User hiện tại
+```http
+GET /api/auth/me
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "user": {
+    "_id": "...",
+    "username": "admin",
+    "email": "admin@iot.com",
+    "role": "Admin",
+    "deviceCount": 5
+  }
+}
+```
+
+---
+
+## 🛠️ Device Management API Endpoints (Admin Only)
+
+#### 1. Lấy tất cả Devices
+```http
+GET /api/devices
+Authorization: Bearer {admin_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "devices": [
+    {
+      "_id": "...",
+      "deviceId": "ESP32_001",
+      "name": "Air Quality Sensor - Workshop 1",
+      "location": "Workshop 1 - Floor 2",
+      "firmwareVersion": "1.0.0",
+      "macAddress": "AA:BB:CC:DD:EE:01",
+      "ipAddress": "192.168.1.101",
+      "assignedWorkers": ["worker1_id", "worker2_id"],
+      "createdAt": "2025-11-20T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 2. Thêm Device mới
+```http
+POST /api/devices
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "deviceId": "ESP32_002",
+  "name": "Air Quality Sensor - Office",
+  "location": "Office - Floor 1",
+  "firmwareVersion": "1.0.0",
+  "macAddress": "AA:BB:CC:DD:EE:02",
+  "ipAddress": "192.168.1.102"
+}
+```
+
+#### 3. Cập nhật Device
+```http
+PUT /api/devices/:id
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "Air Quality Sensor - New Location",
+  "location": "Office - Floor 2"
+}
+```
+
+#### 4. Assign Workers cho Device
+```http
+PUT /api/devices/:id/assign-workers
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "workerIds": ["worker1_id", "worker2_id"]
+}
+```
+
+#### 5. Xóa Device
+```http
+DELETE /api/devices/:id
+Authorization: Bearer {admin_token}
+```
+
+---
+
+## 👥 User Management API Endpoints (Admin Only)
+
+#### 1. Lấy tất cả Users
+```http
+GET /api/users
+Authorization: Bearer {admin_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "users": [
+    {
+      "_id": "...",
+      "username": "admin",
+      "email": "admin@iot.com",
+      "role": "Admin",
+      "deviceCount": 5,
+      "createdAt": "2025-11-01T10:00:00.000Z"
+    },
+    {
+      "_id": "...",
+      "username": "worker1",
+      "email": "worker1@iot.com",
+      "role": "Worker",
+      "deviceCount": 2,
+      "createdAt": "2025-11-05T14:30:00.000Z"
+    }
+  ]
+}
+```
+
+#### 2. Cập nhật Role User
+```http
+PUT /api/users/:id/role
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "role": "Admin"
+}
+```
+
+#### 3. Xóa User
+```http
+DELETE /api/users/:id
+Authorization: Bearer {admin_token}
+```
+
+---
+
+## 🔄 OTA Firmware Update API Endpoints
+
+#### 1. Upload Firmware (Admin Only)
+```http
+POST /api/firmware/upload
+Authorization: Bearer {admin_token}
+Content-Type: multipart/form-data
+```
+
+**Form Data:**
+- `firmware`: File .bin
+- `version`: "1.1.0"
+- `releaseNotes`: "Added auto-calibration feature"
+
+**Response:**
+```json
+{
+  "message": "Upload firmware thành công",
+  "firmware": {
+    "_id": "...",
+    "version": "1.1.0",
+    "filename": "firmware_1234567890_v1.1.0.bin",
+    "fileSize": 900000,
+    "md5Hash": "abc123...",
+    "releaseNotes": "Added auto-calibration feature",
+    "createdAt": "2025-11-20T15:00:00.000Z"
+  }
+}
+```
+
+#### 2. Lấy danh sách Firmware (Admin Only)
+```http
+GET /api/firmware
+Authorization: Bearer {admin_token}
+```
+
+**Response:**
+```json
+{
+  "firmwares": [
+    {
+      "_id": "...",
+      "version": "1.1.0",
+      "filename": "firmware_1234567890_v1.1.0.bin",
+      "fileSize": 900000,
+      "md5Hash": "abc123...",
+      "releaseNotes": "Added auto-calibration",
+      "downloadCount": 5,
+      "isActive": true,
+      "uploadedBy": "admin",
+      "createdAt": "2025-11-20T15:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 3. Check Latest Firmware (ESP32 Public)
+```http
+GET /api/firmware/latest?current=1.0.0
+```
+
+**Response:**
+```json
+{
+  "hasUpdate": true,
+  "currentVersion": "1.0.0",
+  "latestVersion": "1.1.0",
+  "fileSize": 900000,
+  "md5Hash": "abc123...",
+  "releaseNotes": "Added auto-calibration feature",
+  "downloadUrl": "/api/firmware/download/1.1.0"
+}
+```
+
+#### 4. Download Firmware (ESP32 Public)
+```http
+GET /api/firmware/download/:version
+```
+
+**Response:**
+- Binary file stream với headers:
+  - `Content-Type: application/octet-stream`
+  - `Content-Disposition: attachment; filename="..."`
+  - `Content-Length: 900000`
+  - `X-MD5-Hash: abc123...`
+
+#### 5. Trigger OTA Update (Admin Only)
+```http
+POST /api/firmware/trigger-update
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "deviceId": "ESP32_001",
+  "version": "1.1.0"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Đã gửi lệnh OTA update tới device ESP32_001",
+  "version": "1.1.0",
+  "deviceId": "ESP32_001"
+}
+```
+
+#### 6. Xóa Firmware (Admin Only)
+```http
+DELETE /api/firmware/:id
+Authorization: Bearer {admin_token}
+```
+
+**Response:**
+```json
+{
+  "message": "Xóa firmware thành công"
+}
+```
+
+---
+
 ## 🔌 Socket.IO Events
 
 ### Connection
@@ -436,6 +861,71 @@ socket.on('sensor:update', (data) => {
 }
 ```
 
+### Collection: `hourlysummaries`
+
+```javascript
+{
+  hourTimestamp: Date,        // "2025-11-16T10:00:00.000Z" (indexed, unique)
+  sampleCount: Number,        // Số lượng mẫu trong giờ
+  statistics: {
+    temperature: { min: Number, max: Number, avg: Number },
+    humidity: { min: Number, max: Number, avg: Number },
+    aqi: { min: Number, max: Number, avg: Number },
+    pm25: { min: Number, max: Number, avg: Number }
+  },
+  aiSummary: String,          // Bản tóm tắt từ OpenAI
+  createdAt: Date             // Auto-generated
+}
+```
+
+### Collection: `users`
+
+```javascript
+{
+  username: String,           // Unique, required
+  email: String,              // Unique, required
+  password: String,           // Hashed with bcrypt
+  role: String,               // "Admin" hoặc "Worker"
+  devices: [ObjectId],        // Ref to Device (for Workers)
+  createdAt: Date,            // Auto-generated
+  updatedAt: Date             // Auto-generated
+}
+```
+
+### Collection: `devices`
+
+```javascript
+{
+  deviceId: String,           // Unique, required (e.g., "ESP32_001")
+  name: String,               // Device name
+  location: String,           // Device location
+  firmwareVersion: String,    // Current firmware version
+  macAddress: String,         // MAC address
+  ipAddress: String,          // IP address
+  assignedWorkers: [ObjectId], // Ref to User (Workers)
+  createdAt: Date,            // Auto-generated
+  updatedAt: Date             // Auto-generated
+}
+```
+
+### Collection: `firmwares`
+
+```javascript
+{
+  version: String,            // Unique, required (e.g., "1.1.0")
+  filename: String,           // Firmware filename
+  filePath: String,           // Absolute path to file
+  fileSize: Number,           // File size in bytes
+  md5Hash: String,            // MD5 hash for verification
+  releaseNotes: String,       // Release notes
+  uploadedBy: ObjectId,       // Ref to User (Admin)
+  downloadCount: Number,      // Number of downloads
+  isActive: Boolean,          // Active status
+  createdAt: Date,            // Auto-generated
+  updatedAt: Date             // Auto-generated
+}
+```
+
 ### Validation Rules
 - `temperature`: -50°C ≤ T ≤ 100°C
 - `humidity`: 0% ≤ H ≤ 100%
@@ -446,12 +936,14 @@ socket.on('sensor:update', (data) => {
 
 ## 📡 MQTT Message Format
 
-### Topic
+### Topics
+
+#### 1. Sensor Data Topic
 ```
 home/room1/sensors
 ```
 
-### Message (JSON)
+**Message (JSON):**
 ```json
 {
   "datetime": "2025-11-16 12:34:56",
@@ -459,6 +951,27 @@ home/room1/sensors
   "humidity": 61.5,
   "AQI": 85,
   "dust": 35.2
+}
+```
+
+#### 2. OTA Update Topic (per device)
+```
+iot/devices/{deviceId}/ota
+```
+
+**Example:**
+```
+iot/devices/ESP32_001/ota
+```
+
+**Message (JSON):**
+```json
+{
+  "command": "update",
+  "version": "1.1.0",
+  "downloadUrl": "http://192.168.1.100:5000/api/firmware/download/1.1.0",
+  "md5Hash": "abc123...",
+  "fileSize": 900000
 }
 ```
 
@@ -561,12 +1074,15 @@ void loop() {
 ```json
 {
   "dependencies": {
-    "axios": "^1.6.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
     "express": "^4.18.2",
-    "mqtt": "^4.3.7",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.0.0",
+    "mqtt": "^4.3.7",
+    "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
     "socket.io": "^4.7.1"
   },
@@ -850,34 +1366,44 @@ Nếu OpenAI API không khả dụng (lỗi mạng, hết credit, etc.), hệ th
 
 ## 🎯 Mở Rộng & Cải Tiến
 
-### Tính Năng Đã Triển Khai
+### Tính Năng Đã Triển Khai ✅
 
-- ✅ **AI Summary theo giờ** (OpenAI GPT-3.5)
-- ✅ Scheduled job tự động
-- ✅ Fallback mechanism
+- ✅ **Real-time Dashboard** với Socket.IO
+- ✅ **AI Summary theo giờ** (OpenAI GPT-4o-mini)
+- ✅ **Authentication & Authorization** (JWT + Role-based)
+- ✅ **Device Management** (CRUD + Worker Assignment)
+- ✅ **User Management** (CRUD + Role Management)
+- ✅ **OTA Firmware Update** (Upload, Trigger, Auto-update)
+- ✅ **Scheduled Jobs** (Hourly AI Summary)
+- ✅ **Fallback Mechanism** (Khi OpenAI API lỗi)
+- ✅ **Data Validation** (MQTT, API, Form)
+- ✅ **Error Handling** (Global error handler)
 
-### Tính Năng Có Thể Thêm
+### Tính Năng Có Thể Thêm 🔮
 
-- ✅ Thông báo/cảnh báo khi AQI vượt ngưỡng
-- ✅ Export dữ liệu CSV/Excel
-- ✅ Bản đồ nhiệt (heatmap) theo thời gian
-- ✅ Đa ngôn ngữ (i18n)
-- ✅ Authentication & Authorization
-- ✅ Nhiều thiết bị/phòng
-- ✅ Dashboard admin
-- ✅ Dự đoán xu hướng (ML)
-- ✅ AI Summary theo ngày/tuần/tháng
-- ✅ So sánh AI summary giữa các khoảng thời gian
+- 📧 Email/SMS notifications khi AQI vượt ngưỡng
+- 📊 Export dữ liệu CSV/Excel
+- 🗺️ Bản đồ nhiệt (heatmap) theo thời gian
+- 🌍 Đa ngôn ngữ (i18n)
+- 📱 Mobile app (React Native)
+- 🤖 AI Summary theo ngày/tuần/tháng
+- 📈 Dự đoán xu hướng (Machine Learning)
+- 🔔 Push notifications cho mobile
+- 📸 Dashboard screenshots & reports
+- 🏢 Multi-tenant support (nhiều công ty)
 
-### Cải Tiến Kỹ Thuật
+### Cải Tiến Kỹ Thuật 🛠️
 
-- ✅ Redis cache cho API
-- ✅ Rate limiting
-- ✅ Data aggregation (hourly/daily)
-- ✅ Unit tests & Integration tests
-- ✅ CI/CD pipeline
-- ✅ Monitoring & Logging (ELK stack)
-- ✅ Containerization (Docker Compose)
+- ⚡ Redis cache cho API performance
+- 🚦 Rate limiting để chống spam
+- 📊 Data aggregation (hourly/daily averages)
+- 🧪 Unit tests & Integration tests
+- 🔄 CI/CD pipeline (GitHub Actions)
+- 📊 Monitoring & Logging (ELK stack, Prometheus)
+- 🐳 Docker & Docker Compose
+- ☸️ Kubernetes deployment
+- 🔒 HTTPS/TLS encryption
+- 🔐 OAuth2 social login
 
 ---
 
@@ -924,9 +1450,73 @@ Project này được phát triển cho mục đích học tập và nghiên c�
 
 Hệ thống IoT giám sát chất lượng không khí này cung cấp:
 - ✅ Giám sát realtime với độ trễ thấp
+- ✅ AI-powered analysis (OpenAI GPT-4o-mini)
 - ✅ Lưu trữ lịch sử dài hạn
+- ✅ Authentication & Role-based access control
+- ✅ Device & User management
+- ✅ OTA firmware update từ xa
 - ✅ Giao diện trực quan, dễ sử dụng
 - ✅ Kiến trúc mở rộng được
 - ✅ Code sạch, có cấu trúc
 
-**Chúc bạn triển khai thành công! 🚀**
+---
+
+## 🎬 Hướng Dẫn Demo Nhanh
+
+### 1. Demo Real-time Monitoring (3 phút)
+1. Login Admin/Worker
+2. Xem Dashboard realtime
+3. Quan sát charts tự động cập nhật mỗi 2 giây
+4. Giải thích AQI levels (Good/Moderate/Unhealthy)
+
+### 2. Demo AI Summary (2 phút)
+1. Click nút **🤖 AI Summary**
+2. Xem phân tích AI của 1 giờ gần nhất
+3. Giải thích cấu trúc summary:
+   - Nhận xét tổng quan
+   - Đánh giá chi tiết (nhiệt độ, độ ẩm, AQI, PM2.5)
+   - Xu hướng & dấu hiệu
+   - Khuyến nghị an toàn
+   - Kết luận
+
+### 3. Demo Device Management (3 phút) - Admin Only
+1. Vào Admin Panel (**🛠️ Thiết bị**)
+2. Thêm device mới (deviceId, name, location, MAC, IP)
+3. Assign workers cho device
+4. Sửa device info
+5. Xóa device
+6. Login Worker → Chỉ thấy devices được assign
+
+### 4. Demo User Management (2 phút) - Admin Only
+1. Vào User Management (**👥 Người dùng**)
+2. Xem danh sách users với device count
+3. Filter users (All/Admin/Worker)
+4. Search users
+5. Edit user role (Worker → Admin)
+6. Delete user
+
+### 5. Demo OTA Firmware Update (5 phút) - Admin Only
+1. **Chuẩn bị:**
+   - Build 2 firmware versions (v1.0.0, v1.1.0) từ Arduino IDE
+   - Flash v1.0.0 lên ESP32 qua USB
+   
+2. **Upload Firmware:**
+   - Click **🔄 OTA** → **⬆️ Upload Firmware**
+   - Upload file v1.1.0.bin
+   - Nhập version, release notes
+   
+3. **Trigger Update:**
+   - Click **🚀 Trigger OTA** → Chọn device → Update
+   
+4. **Observe ESP32:**
+   - Mở Serial Monitor
+   - Theo dõi: Download → Verify MD5 → Flash → Reboot
+   - ESP32 boot với version 1.1.0
+
+### 6. Demo Role-based Access (2 phút)
+1. Login Admin → Có tất cả nút (Thiết bị, Người dùng, OTA)
+2. Logout → Login Worker → Chỉ thấy Dashboard & History
+3. Worker chỉ thấy devices được assign
+
+---
+
