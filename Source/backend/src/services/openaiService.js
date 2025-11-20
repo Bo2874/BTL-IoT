@@ -80,7 +80,7 @@ export async function generateAISummary(stats, sampleCount) {
     const response = await axios.post(
       OPENAI_API_URL,
       {
-        model: "gpt-5",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -91,7 +91,7 @@ export async function generateAISummary(stats, sampleCount) {
             content: buildPrompt(stats, sampleCount),
           },
         ],
-        temperature: 1
+        temperature: 0.7
       },
       {
         headers: {
