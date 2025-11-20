@@ -1,4 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { getRealtime, getHistory } from '../api/sensors';
 import { API_URL } from '../config';
 import { io } from 'socket.io-client';
@@ -8,10 +10,17 @@ import AISummaryModal from '../components/AISummaryModal';
 import { Bar, Doughnut } from 'react-chartjs-2';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [realtime, setRealtime] = useState(null);
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAISummary, setShowAISummary] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     loadAll();
@@ -159,6 +168,12 @@ export default function Dashboard() {
           </div>
         </div>
         <div className='flex items-center gap-3'>
+          {/* User Info */}
+          <div className='text-right text-xs border-r border-white/30 pr-3'>
+            <p className='font-semibold'>{user?.name || 'User'}</p>
+            <p className='opacity-80'>{user?.role || 'Worker'}</p>
+          </div>
+          
           <button 
             onClick={() => setShowAISummary(true)}
             className='ai-summary-btn'
@@ -166,6 +181,43 @@ export default function Dashboard() {
           >
             🤖 AI Summary
           </button>
+          
+          {user?.role === 'Admin' && (
+            <>
+              <button
+                onClick={() => navigate('/admin')}
+                className='admin-btn'
+                title='Quản lý thiết bị'
+              >
+                🛠️ Thiết bị
+              </button>
+              <button
+                onClick={() => navigate('/users')}
+                className='admin-btn'
+                title='Quản lý người dùng'
+                style={{ marginLeft: '0.5rem' }}
+              >
+                👥 Người dùng
+              </button>
+              <button
+                onClick={() => navigate('/ota')}
+                className='admin-btn'
+                title='OTA Firmware Update'
+                style={{ marginLeft: '0.5rem' }}
+              >
+                🔄 OTA
+              </button>
+            </>
+          )}
+          
+          <button
+            onClick={handleLogout}
+            className='logout-btn'
+            title='Đăng xuất'
+          >
+            🚪 Logout
+          </button>
+          
           <div className='text-right text-xs'>
             <p>{new Date().toLocaleString('vi-VN')}</p>
           </div>
