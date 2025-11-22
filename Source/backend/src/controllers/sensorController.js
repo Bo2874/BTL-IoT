@@ -1,5 +1,126 @@
 import SensorData from "../models/sensorData.js";
 
+// 🆕 Bật/Tắt còi liên tục (toggle ON/OFF)
+export const toggleBuzzer = async (req, res) => {
+  try {
+    const { deviceId, state } = req.body; // state: "on" hoặc "off"
+
+    if (!deviceId) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu deviceId"
+      });
+    }
+
+    if (!state || !["on", "off"].includes(state)) {
+      return res.status(400).json({
+        success: false,
+        message: 'State phải là "on" hoặc "off"'
+      });
+    }
+
+    // Import MQTT client động
+    const { getMqttClient } = await import("../mqtt/mqttClient.js");
+    const client = getMqttClient();
+
+    if (!client || !client.connected) {
+      return res.status(503).json({
+        success: false,
+        message: "MQTT client không kết nối"
+      });
+    }
+
+    // Gửi lệnh bật/tắt còi qua MQTT
+    const topic = `iot/devices/${deviceId}/buzzer/toggle`;
+    const message = JSON.stringify({ 
+      action: "toggle",
+      state: state
+    });
+
+    client.publish(topic, message, { qos: 1 }, (err) => {
+      if (err) {
+        console.error("❌ Error publishing buzzer toggle command:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Lỗi khi gửi lệnh bật/tắt còi"
+        });
+      }
+
+      console.log(`🔊 Buzzer toggle sent to device ${deviceId}: ${state.toUpperCase()}`);
+      res.status(200).json({
+        success: true,
+        message: `Đã ${state === 'on' ? 'BẬT' : 'TẮT'} còi thiết bị ${deviceId}`,
+        data: { deviceId, state }
+      });
+    });
+
+  } catch (err) {
+    console.error("❌ Error in toggleBuzzer:", err);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server khi bật/tắt còi",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined
+    });
+  }
+};
+
+// 🆕 Kích hoạt còi thủ công (beep N lần)
+export const triggerBuzzer = async (req, res) => {
+  try {
+    const { deviceId, duration = 3 } = req.body; // duration: số lần beep (mặc định 3)
+
+    if (!deviceId) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu deviceId"
+      });
+    }
+
+    // Import MQTT client động
+    const { getMqttClient } = await import("../mqtt/mqttClient.js");
+    const client = getMqttClient();
+
+    if (!client || !client.connected) {
+      return res.status(503).json({
+        success: false,
+        message: "MQTT client không kết nối"
+      });
+    }
+
+    // Gửi lệnh kích hoạt còi qua MQTT
+    const topic = `iot/devices/${deviceId}/buzzer`;
+    const message = JSON.stringify({ 
+      action: "trigger",
+      duration: parseInt(duration)
+    });
+
+    client.publish(topic, message, { qos: 1 }, (err) => {
+      if (err) {
+        console.error("❌ Error publishing buzzer command:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Lỗi khi gửi lệnh kích hoạt còi"
+        });
+      }
+
+      console.log(`🔊 Buzzer trigger sent to device ${deviceId} (${duration} beeps)`);
+      res.status(200).json({
+        success: true,
+        message: `Đã gửi lệnh kích hoạt còi đến thiết bị ${deviceId}`,
+        data: { deviceId, duration }
+      });
+    });
+
+  } catch (err) {
+    console.error("❌ Error in triggerBuzzer:", err);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server khi kích hoạt còi",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined
+    });
+  }
+};
+
 // Lấy dữ liệu realtime (bản ghi mới nhất)
 export const getRealtime = async (req, res) => {
   try {

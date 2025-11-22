@@ -7,6 +7,8 @@ Source/backend/.env
 Source/frontend/.env
 *.env
 
+node_modules/
+
 # Log files
 *.log
 npm-debug.log*

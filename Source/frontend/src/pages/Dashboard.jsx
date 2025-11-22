@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getRealtime, getHistory } from '../api/sensors';
+import { triggerBuzzer, toggleBuzzer } from '../api/buzzer';
 import { API_URL } from '../config';
 import { io } from 'socket.io-client';
 import SensorChart from '../components/SensorChart';
@@ -16,10 +17,45 @@ export default function Dashboard() {
   const [history, setHistory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAISummary, setShowAISummary] = useState(false);
+  const [buzzerLoading, setBuzzerLoading] = useState(false);
+  const [buzzerState, setBuzzerState] = useState('off'); // 'on' hoặc 'off'
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  // 🆕 Hàm BẬT/TẮT còi liên tục
+  const handleToggleBuzzer = async () => {
+    try {
+      setBuzzerLoading(true);
+      const deviceId = 'ESP32_01'; // ✅ Device ID thực tế từ MongoDB
+      const newState = buzzerState === 'off' ? 'on' : 'off';
+      
+      await toggleBuzzer(deviceId, newState);
+      setBuzzerState(newState);
+      alert(`✅ Đã ${newState === 'on' ? 'BẬT' : 'TẮT'} còi!`);
+    } catch (error) {
+      console.error('Error toggling buzzer:', error);
+      alert('❌ Lỗi: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setBuzzerLoading(false);
+    }
+  };
+
+  // 🆕 Hàm kích hoạt còi thủ công (beep 3 lần)
+  const handleTriggerBuzzer = async () => {
+    try {
+      setBuzzerLoading(true);
+      const deviceId = 'ESP32_01'; // ✅ Device ID thực tế từ MongoDB
+      await triggerBuzzer(deviceId, 3); // Kêu 3 beep
+      alert('✅ Đã gửi lệnh kích hoạt còi!');
+    } catch (error) {
+      console.error('Error triggering buzzer:', error);
+      alert('❌ Lỗi khi kích hoạt còi: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setBuzzerLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -206,6 +242,20 @@ export default function Dashboard() {
                 style={{ marginLeft: '0.5rem' }}
               >
                 🔄 OTA
+              </button>
+              <button
+                onClick={handleToggleBuzzer}
+                className='admin-btn'
+                title={buzzerState === 'off' ? 'Bật còi' : 'Tắt còi'}
+                style={{ 
+                  marginLeft: '0.5rem',
+                  backgroundColor: buzzerLoading ? '#9ca3af' : (buzzerState === 'on' ? '#ef4444' : '#10b981'),
+                  cursor: buzzerLoading ? 'not-allowed' : 'pointer',
+                  animation: buzzerState === 'on' ? 'pulse 1s infinite' : 'none'
+                }}
+                disabled={buzzerLoading}
+              >
+                {buzzerLoading ? '⏳' : (buzzerState === 'on' ? '🔊 TẮT' : '🔇 BẬT')}
               </button>
             </>
           )}

@@ -110,4 +110,7 @@ client.on("message", async (topic, message) => {
   }
 });
 
+// Export hàm để lấy MQTT client instance
+export const getMqttClient = () => client;
+
 export default client;
