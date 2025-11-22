@@ -188,7 +188,7 @@ export const downloadFirmware = async (req, res) => {
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Disposition", `attachment; filename="${firmware.filename}"`);
     res.setHeader("Content-Length", firmware.fileSize);
-    res.setHeader("X-MD5-Hash", firmware.md5Hash);
+    res.setHeader("X-MD5", firmware.md5Hash); // ✅ ESP32 đọc header "X-MD5"
 
     // Stream file
     const fileStream = fs.createReadStream(firmware.filePath);
